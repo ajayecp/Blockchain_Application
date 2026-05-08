@@ -9,7 +9,7 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         h1 { color: #2d5a27; border-bottom: 2px solid #2d5a27; padding-bottom: 10px; }
         label { display: block; margin-top: 10px; font-weight: bold; font-size: 13px; }
-        input, select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        input, select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
         button { background: #2d5a27; color: white; border: none; padding: 15px; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; }
         .log { margin-top: 20px; padding: 15px; background: #e8f5e9; border-left: 5px solid #2d5a27; display: none; }
         .card { background: #fff; border: 1px solid #eee; padding: 15px; margin-top: 10px; border-radius: 8px; }
@@ -22,7 +22,7 @@
     
     <div class="grid">
         <div>
-            <h3>Dados do Lote (Produto)</h3>
+            <h3>📦 Dados do Lote (Produto)</h3>
             <label>ID Produto (Lote)</label><input type="text" id="id_produto" placeholder="Ex: LOTE-2026-001">
             <label>Origem (Floresta/Coordenadas)</label><input type="text" id="origem_coleta">
             <label>Comunidade</label><input type="text" id="comunidade_fornecedora">
@@ -35,7 +35,7 @@
         </div>
 
         <div>
-            <h3> Operação (Registro)</h3>
+            <h3>🛠️ Operação (Registro)</h3>
             <label>Etapa do Processo</label>
             <select id="id_etapa">
                 <option value="coleta_castanha_in_natura">Coleta In Natura</option>
@@ -58,7 +58,7 @@
 
     <hr style="margin-top:40px">
     <h2>Rastreabilidade Reversa</h2>
-    <input type="text" id="search_id" placeholder="Digite o ID do Lote">
+    <input type="text" id="search_id" placeholder="Digite o ID do Lote (ex: LOTE-2026-001)">
     <button style="background:#1a4d6e" onclick="buscarHistorico()">BUSCAR HISTÓRICO COMPLETO</button>
     <div id="historyResult"></div>
 </div>
@@ -67,48 +67,74 @@
     const API = "http://127.0.0.1:8000";
 
     async function enviarDados() {
-        const data = {
-            id_produto: document.getElementById('id_produto').value,
-            origem_coleta: document.getElementById('origem_coleta').value,
-            comunidade_fornecedora: document.getElementById('comunidade_fornecedora').value,
-            peso_lote: parseFloat(document.getElementById('peso_lote').value || 0),
-            tamanho: document.getElementById('tamanho').value,
-            umidade: parseFloat(document.getElementById('umidade').value || 0),
-            status_produto: document.getElementById('status_produto').value,
-            id_etapa: document.getElementById('id_etapa').value,
-            evento: document.getElementById('evento').value,
-            dispositivo_origem: document.getElementById('dispositivo_origem').value,
-            localizacao: document.getElementById('localizacao').value,
-            usuario_responsavel: document.getElementById('usuario_responsavel').value,
-            nivel_confiabilidade: parseFloat(document.getElementById('nivel_confiabilidade').value || 100)
-        };
-
-        const res = await fetch(`${API}/mine_event/`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
-        const result = await res.json();
         const log = document.getElementById('logBox');
         log.style.display = 'block';
-        log.innerHTML = `<strong>Sucesso!</strong> Bloco Gerado: <code>${result.codigo_blockchain}</code>`;
+        log.innerHTML = "⏳ A processar...";
+
+        try {
+            const data = {
+                id_produto: document.getElementById('id_produto').value,
+                origem_coleta: document.getElementById('origem_coleta').value,
+                comunidade_fornecedora: document.getElementById('comunidade_fornecedora').value,
+                peso_lote: parseFloat(document.getElementById('peso_lote').value || 0),
+                tamanho: document.getElementById('tamanho').value,
+                umidade: parseFloat(document.getElementById('umidade').value || 0),
+                status_produto: document.getElementById('status_produto').value,
+                id_etapa: document.getElementById('id_etapa').value,
+                evento: document.getElementById('evento').value,
+                dispositivo_origem: document.getElementById('dispositivo_origem').value,
+                localizacao: document.getElementById('localizacao').value,
+                usuario_responsavel: document.getElementById('usuario_responsavel').value,
+                nivel_confiabilidade: parseFloat(document.getElementById('nivel_confiabilidade').value || 100)
+            };
+
+            const res = await fetch(`${API}/mine_event/`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            if (!res.ok) {
+                const erroBackend = await res.json();
+                console.error("Erro do servidor:", erroBackend);
+                throw new Error("Verifique se preencheu os campos obrigatórios (como o ID Produto e o Evento).");
+            }
+
+            const result = await res.json();
+            log.innerHTML = `✅ <strong>Sucesso!</strong> Bloco Gerado na Blockchain.<br><small>Hash: <code>${result.codigo_blockchain}</code></small>`;
+            
+        } catch (e) {
+            log.innerHTML = `<span style="color:red">❌ Erro: ${e.message}</span>`;
+            console.error(e);
+        }
     }
 
     async function buscarHistorico() {
         const id = document.getElementById('search_id').value;
-        const res = await fetch(`${API}/produto/${id}`);
-        const data = await res.json();
         const container = document.getElementById('historyResult');
-        container.innerHTML = "";
-        
-        data.historico.forEach(b => {
-            container.innerHTML += `
-                <div class="card">
-                    <strong>Etapa: ${b.dados.id_etapa}</strong> | ${new Date(b.dados.timestamp_evento*1000).toLocaleString()}<br>
-                    Evento: ${b.dados.evento}<br>
-                    <small>Hash: ${b.hash_bloco}</small>
-                </div>`;
-        });
+        container.innerHTML = "⏳ A procurar na blockchain...";
+
+        try {
+            const res = await fetch(`${API}/produto/${id}`);
+            if (!res.ok) throw new Error("Lote não encontrado na Blockchain.");
+            
+            const data = await res.json();
+            container.innerHTML = `<h3>Resultados para: ${id}</h3>`;
+            
+            data.historico.reverse().forEach(b => {
+                const dataHora = new Date(b.dados.timestamp_evento * 1000).toLocaleString('pt-PT');
+                container.innerHTML += `
+                    <div class="card">
+                        <span style="color:#2d5a27; font-weight:bold;">${b.dados.id_etapa.replace(/_/g, ' ').toUpperCase()}</span>
+                        <br><strong>Data:</strong> ${dataHora}
+                        <br><strong>Evento:</strong> ${b.dados.evento}
+                        <br><strong>Status:</strong> ${b.dados.status_produto}
+                        <br><small style="color:gray">Hash do Bloco: ${b.hash_bloco}</small>
+                    </div>`;
+            });
+        } catch (e) {
+            container.innerHTML = `<span style="color:red">❌ Erro: ${e.message}</span>`;
+        }
     }
 </script>
 </body>

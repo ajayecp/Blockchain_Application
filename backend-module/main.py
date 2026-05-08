@@ -1,23 +1,42 @@
 import hashlib
 import json
 import uuid
+import os
 from time import time
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, List
 
+# Nome do arquivo onde os dados serão armazenados
+DB_FILE = "blockchain_data.json"
 
-# ESTRUTURA DA BLOCKCHAIN
-
+# ==========================================
+# Lógica da Blockchain com Persistência
+# ==========================================
 class Blockchain:
     def __init__(self):
         self.chain = []
-        # Bloco Gênesis
-        self.create_block(previous_hash='1', proof=100, record_data={
-            "evento": "Gênesis - Início da Cadeia",
-            "status_validacao": "Sistema Inicializado"
-        })
+        if os.path.exists(DB_FILE):
+            self.load_from_disk()
+        else:
+            # Se o arquivo não existir, cria o Bloco Gênesis
+            self.create_block(previous_hash='1', proof=100, record_data={
+                "evento": "Gênesis - Sistema de Castanha Iniciado",
+                "status_validacao": "Sistema Online"
+            })
+
+    def save_to_disk(self):
+        with open(DB_FILE, 'w', encoding='utf-8') as f:
+            json.dump(self.chain, f, indent=4, ensure_ascii=False)
+
+    def load_from_disk(self):
+        try:
+            with open(DB_FILE, 'r', encoding='utf-8') as f:
+                self.chain = json.load(f)
+        except Exception as e:
+            print(f"Erro ao carregar arquivo: {e}")
+            self.chain = []
 
     def create_block(self, proof: int, previous_hash: str, record_data: dict):
         block = {
@@ -29,6 +48,7 @@ class Blockchain:
         }
         block['hash_bloco'] = self.hash(block)
         self.chain.append(block)
+        self.save_to_disk() # Salva no arquivo a cada novo bloco
         return block
 
     def get_previous_block(self):
@@ -47,11 +67,10 @@ class Blockchain:
             if hash_op[:4] == '0000': return new_proof
             new_proof += 1
 
-
-# MODELAGEM DE DADOS (BASEADA NO CSV)
-
+# ==========================================
+# Modelagem e API
+# ==========================================
 class EventoCastanha(BaseModel):
-    # : PRODUTO
     id_produto: str
     origem_coleta: Optional[str] = ""
     comunidade_fornecedora: Optional[str] = ""
@@ -65,31 +84,17 @@ class EventoCastanha(BaseModel):
     status_produto: str = "Em processamento"
     certificacao_sustentavel: Optional[str] = ""
     pegada_carbono: Optional[str] = ""
-
-    # ETAPAS
-    id_etapa: str  # coleta_castanha_in_natura, inspecao_entrada, etc.
-
-    # REGISTRO
+    id_etapa: str
     evento: str
     usuario_responsavel: str
     dispositivo_origem: str
     localizacao: str
     nivel_confiabilidade: float = 100.0
 
-app = FastAPI(title="Blockchain Castanha da Amazônia")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI(title="Blockchain Castanha V2")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 blockchain = Blockchain()
-
-@app.get("/")
-def root():
-    return {"status": "Online", "documentacao": "/docs"}
 
 @app.post("/mine_event/")
 def mine_event(req: EventoCastanha):
@@ -97,7 +102,6 @@ def mine_event(req: EventoCastanha):
     proof = blockchain.proof_of_work(prev_block['proof'])
     prev_hash = blockchain.hash(prev_block)
     
-    # Gerar campos automáticos do Registro
     dados = req.dict()
     dados["id_registro"] = str(uuid.uuid4())
     dados["timestamp_evento"] = time()
@@ -105,18 +109,17 @@ def mine_event(req: EventoCastanha):
     dados["assinatura_digital"] = hashlib.sha256(str(dados).encode()).hexdigest()
     
     block = blockchain.create_block(proof, prev_hash, dados)
-    
-    return {
-        "codigo_blockchain": block['hash_bloco'],
-        "qr_code": f"https://rastreio.am/lote/{req.id_produto}",
-        "bloco": block
-    }
+    return {"codigo_blockchain": block['hash_bloco'], "bloco": block}
 
 @app.get("/produto/{id_produto}")
 def get_history(id_produto: str):
+    # Busca no arquivo/memória todos os blocos do lote
     history = [b for b in blockchain.chain if b.get('dados', {}).get('id_produto') == id_produto]
+    if not history:
+        raise HTTPException(status_code=404, detail="Lote não encontrado")
     return {"id_produto": id_produto, "historico": history}
 
-@app.get("/chain/")
-def full_chain():
+@app.get("/export_json/")
+def export_json():
+    # Rota extra para baixar o arquivo bruto
     return blockchain.chain

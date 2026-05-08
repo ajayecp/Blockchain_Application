@@ -16,5 +16,10 @@ git clone : https://github.com/ajayecp/Blockchain_Application
 cd backend-module
 python -m venv env
 .\env\Scripts\activate
-pip install -r .\requirements.txt           
-uvicorn main:app --reload
+pip install -r .\requirements.txt   
+comando para rodar backend:
+
+    uvicorn main:app --reload
+
+comando para rodar frontend:
+    python -m http.server 8080
