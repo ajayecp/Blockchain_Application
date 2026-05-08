@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema de Rastreabilidade Castanha</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        h1 { color: #2d5a27; border-bottom: 2px solid #2d5a27; padding-bottom: 10px; }
+        label { display: block; margin-top: 10px; font-weight: bold; font-size: 13px; }
+        input, select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #2d5a27; color: white; border: none; padding: 15px; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+        .log { margin-top: 20px; padding: 15px; background: #e8f5e9; border-left: 5px solid #2d5a27; display: none; }
+        .card { background: #fff; border: 1px solid #eee; padding: 15px; margin-top: 10px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Cadeia Produtiva: Castanha da Amazônia</h1>
+    
+    <div class="grid">
+        <div>
+            <h3>Dados do Lote (Produto)</h3>
+            <label>ID Produto (Lote)</label><input type="text" id="id_produto" placeholder="Ex: LOTE-2026-001">
+            <label>Origem (Floresta/Coordenadas)</label><input type="text" id="origem_coleta">
+            <label>Comunidade</label><input type="text" id="comunidade_fornecedora">
+            <label>Peso do Lote (kg)</label><input type="number" id="peso_lote" step="0.1">
+            <label>Tamanho</label>
+            <select id="tamanho"><option>Pequena</option><option selected>Média</option><option>Grande</option></select>
+            <label>Umidade (%)</label><input type="number" id="umidade" step="0.1">
+            <label>Status</label>
+            <select id="status_produto"><option>Em processamento</option><option>Aprovado</option><option>Descartado</option></select>
+        </div>
+
+        <div>
+            <h3> Operação (Registro)</h3>
+            <label>Etapa do Processo</label>
+            <select id="id_etapa">
+                <option value="coleta_castanha_in_natura">Coleta In Natura</option>
+                <option value="inspecao_entrada">Inspeção (Sensores/IA)</option>
+                <option value="analise_visao_computacional">Análise Visão Computacional</option>
+                <option value="classificacao_inteligente">Classificação Robótica</option>
+                <option value="empacotamento">Empacotamento Final</option>
+            </select>
+            <label>Descrição do Evento</label><input type="text" id="evento" placeholder="Ex: Lote validado pela visão computacional">
+            <label>Dispositivo</label><input type="text" id="dispositivo_origem" placeholder="Ex: Câmera Smart-01">
+            <label>Localização (GPS/Fábrica)</label><input type="text" id="localizacao" value="Manaus, AM">
+            <label>Responsável</label><input type="text" id="usuario_responsavel">
+            <label>Confiança (%)</label><input type="number" id="nivel_confiabilidade" value="100">
+        </div>
+    </div>
+
+    <button onclick="enviarDados()">REGISTRAR NA BLOCKCHAIN</button>
+
+    <div id="logBox" class="log"></div>
+
+    <hr style="margin-top:40px">
+    <h2>Rastreabilidade Reversa</h2>
+    <input type="text" id="search_id" placeholder="Digite o ID do Lote">
+    <button style="background:#1a4d6e" onclick="buscarHistorico()">BUSCAR HISTÓRICO COMPLETO</button>
+    <div id="historyResult"></div>
+</div>
+
+<script>
+    const API = "http://127.0.0.1:8000";
+
+    async function enviarDados() {
+        const data = {
+            id_produto: document.getElementById('id_produto').value,
+            origem_coleta: document.getElementById('origem_coleta').value,
+            comunidade_fornecedora: document.getElementById('comunidade_fornecedora').value,
+            peso_lote: parseFloat(document.getElementById('peso_lote').value || 0),
+            tamanho: document.getElementById('tamanho').value,
+            umidade: parseFloat(document.getElementById('umidade').value || 0),
+            status_produto: document.getElementById('status_produto').value,
+            id_etapa: document.getElementById('id_etapa').value,
+            evento: document.getElementById('evento').value,
+            dispositivo_origem: document.getElementById('dispositivo_origem').value,
+            localizacao: document.getElementById('localizacao').value,
+            usuario_responsavel: document.getElementById('usuario_responsavel').value,
+            nivel_confiabilidade: parseFloat(document.getElementById('nivel_confiabilidade').value || 100)
+        };
+
+        const res = await fetch(`${API}/mine_event/`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        const log = document.getElementById('logBox');
+        log.style.display = 'block';
+        log.innerHTML = `<strong>Sucesso!</strong> Bloco Gerado: <code>${result.codigo_blockchain}</code>`;
+    }
+
+    async function buscarHistorico() {
+        const id = document.getElementById('search_id').value;
+        const res = await fetch(`${API}/produto/${id}`);
+        const data = await res.json();
+        const container = document.getElementById('historyResult');
+        container.innerHTML = "";
+        
+        data.historico.forEach(b => {
+            container.innerHTML += `
+                <div class="card">
+                    <strong>Etapa: ${b.dados.id_etapa}</strong> | ${new Date(b.dados.timestamp_evento*1000).toLocaleString()}<br>
+                    Evento: ${b.dados.evento}<br>
+                    <small>Hash: ${b.hash_bloco}</small>
+                </div>`;
+        });
+    }
+</script>
+</body>
+</html>
