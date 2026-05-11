@@ -115,7 +115,7 @@
         container.innerHTML = "⏳ A procurar na blockchain...";
 
         try {
-            const res = await fetch(`${API}/produto/${id}`);
+            const res = await fetch(`${API}/buscar/${id}`);
             if (!res.ok) throw new Error("Lote não encontrado na Blockchain.");
             
             const data = await res.json();

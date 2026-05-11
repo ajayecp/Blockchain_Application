@@ -1,62 +1,49 @@
 import hashlib
 import json
 import uuid
-import os
 from time import time
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from pydantic import BaseModel
+from typing import Optional
 
-# Nome do arquivo onde os dados serão armazenados
-DB_FILE = "blockchain_data.json"
+from FileStore import FileStorage
 
-# ==========================================
-# Lógica da Blockchain com Persistência
-# ==========================================
 class Blockchain:
     def __init__(self):
-        self.chain = []
-        if os.path.exists(DB_FILE):
-            self.load_from_disk()
-        else:
-            # Se o arquivo não existir, cria o Bloco Gênesis
+        self.storage = FileStorage("blockchain_data.json")
+        chain = self.storage.read()
+        if not chain:
             self.create_block(previous_hash='1', proof=100, record_data={
                 "evento": "Gênesis - Sistema de Castanha Iniciado",
                 "status_validacao": "Sistema Online"
             })
 
-    def save_to_disk(self):
-        with open(DB_FILE, 'w', encoding='utf-8') as f:
-            json.dump(self.chain, f, indent=4, ensure_ascii=False)
-
-    def load_from_disk(self):
-        try:
-            with open(DB_FILE, 'r', encoding='utf-8') as f:
-                self.chain = json.load(f)
-        except Exception as e:
-            print(f"Erro ao carregar arquivo: {e}")
-            self.chain = []
-
     def create_block(self, proof: int, previous_hash: str, record_data: dict):
+        chain = self.storage.read()
         block = {
-            'index': len(self.chain) + 1,
+            'index': len(chain) + 1,
             'timestamp': time(),
             'dados': record_data,
             'proof': proof,
             'previous_hash': previous_hash
         }
-        block['hash_bloco'] = self.hash(block)
-        self.chain.append(block)
-        self.save_to_disk() # Salva no arquivo a cada novo bloco
+        
+        hash_bloco = self.hash(block)
+        block['hash_bloco'] = hash_bloco
+        block['id'] = hash_bloco 
+        
+        self.storage.create(block)
         return block
 
     def get_previous_block(self):
-        return self.chain[-1]
+        chain = self.storage.read()
+        return chain[-1]
 
     def hash(self, block):
         block_copy = block.copy()
-        if 'hash_bloco' in block_copy: del block_copy['hash_bloco']
+        block_copy.pop('hash_bloco', None)
+        block_copy.pop('id', None)
         encoded_block = json.dumps(block_copy, sort_keys=True).encode()
         return hashlib.sha256(encoded_block).hexdigest()
 
@@ -64,37 +51,29 @@ class Blockchain:
         new_proof = 1
         while True:
             hash_op = hashlib.sha256(str(new_proof**2 - previous_proof**2).encode()).hexdigest()
-            if hash_op[:4] == '0000': return new_proof
+            if hash_op[:4] == '0000':
+                return new_proof
             new_proof += 1
 
-# ==========================================
-# Modelagem e API
-# ==========================================
+app = FastAPI(title="Blockchain Castanha da Amazônia")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+blockchain = Blockchain()
+
 class EventoCastanha(BaseModel):
     id_produto: str
     origem_coleta: Optional[str] = ""
     comunidade_fornecedora: Optional[str] = ""
-    data_coleta: Optional[str] = ""
     peso_lote: float = 0.0
-    quantidade_castanhas: int = 0
     tamanho: str = "Média"
-    classificacao_qualidade: str = "N/A"
     umidade: float = 0.0
-    temperatura_armazenamento: float = 0.0
     status_produto: str = "Em processamento"
-    certificacao_sustentavel: Optional[str] = ""
-    pegada_carbono: Optional[str] = ""
     id_etapa: str
     evento: str
     usuario_responsavel: str
     dispositivo_origem: str
     localizacao: str
     nivel_confiabilidade: float = 100.0
-
-app = FastAPI(title="Blockchain Castanha V2")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-
-blockchain = Blockchain()
 
 @app.post("/mine_event/")
 def mine_event(req: EventoCastanha):
@@ -105,21 +84,28 @@ def mine_event(req: EventoCastanha):
     dados = req.dict()
     dados["id_registro"] = str(uuid.uuid4())
     dados["timestamp_evento"] = time()
-    dados["status_validacao"] = "Validado"
-    dados["assinatura_digital"] = hashlib.sha256(str(dados).encode()).hexdigest()
     
     block = blockchain.create_block(proof, prev_hash, dados)
     return {"codigo_blockchain": block['hash_bloco'], "bloco": block}
 
-@app.get("/produto/{id_produto}")
-def get_history(id_produto: str):
-    # Busca no arquivo/memória todos os blocos do lote
-    history = [b for b in blockchain.chain if b.get('dados', {}).get('id_produto') == id_produto]
-    if not history:
-        raise HTTPException(status_code=404, detail="Lote não encontrado")
-    return {"id_produto": id_produto, "historico": history}
+@app.get("/buscar/{termo}")
+def buscar_geral(termo: str):
+    termo = termo.strip()
+    chain = blockchain.storage.read()
+    
+    for b in chain:
+        if (b.get('id') == termo or 
+            b.get('hash_bloco') == termo or 
+            b.get('dados', {}).get('id_produto') == termo):
+            
+            id_alvo = b.get('dados', {}).get('id_produto')
+            historico = [bl for bl in chain if bl.get('dados', {}).get('id_produto') == id_alvo]
+            tipo = "Hash" if (b.get('id') == termo or b.get('hash_bloco') == termo) else "Lote"
+            
+            return {"id_produto": id_alvo, "historico": historico, "tipo_busca": tipo}
+            
+    raise HTTPException(status_code=404, detail="Registro não encontrado na Blockchain.")
 
-@app.get("/export_json/")
-def export_json():
-    # Rota extra para baixar o arquivo bruto
-    return blockchain.chain
+@app.get("/chain/")
+def full_chain():
+    return blockchain.storage.read()
