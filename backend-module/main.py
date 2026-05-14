@@ -6,10 +6,8 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-# Importamos a nossa nova estrutura de base de dados
 from database import SessionLocal, BlockModel, engine
 
-# Função para obter a sessão da BD
 def get_db():
     db = SessionLocal()
     try:
@@ -38,7 +36,7 @@ def startup_event():
     db = SessionLocal()
     # Cria Bloco Gênesis se a tabela estiver vazia
     if db.query(BlockModel).count() == 0:
-        genesis_dados = {"evento": "Gênesis - Sistema de Castanha Iniciado", "status": "Online"}
+        genesis_dados = {"evento": "Sistema de Castanha Iniciado", "status": "Online"}
         block_data = {
             'index': 1,
             'timestamp': time(),
@@ -88,6 +86,7 @@ def mine_event(req: dict, db: Session = Depends(get_db)):
     db.commit()
     
     return {"codigo_blockchain": hash_bloco}
+
 @app.get("/buscar/{termo}")
 def buscar(termo: str, db: Session = Depends(get_db)):
     # Busca por Hash ou por ID do Produto dentro do JSON
@@ -105,7 +104,6 @@ def buscar(termo: str, db: Session = Depends(get_db)):
         for b in blocks:
             dados = json.loads(b.dados_json)
             if dados.get('id_produto') == id_produto_alvo:
-                # CORREÇÃO: Adicionamos o timestamp para a data funcionar
                 historico.append({"hash_bloco": b.id, "timestamp": b.timestamp, "dados": dados, "index": b.index})
         
         # Identifica o tipo de busca
@@ -118,7 +116,6 @@ def buscar(termo: str, db: Session = Depends(get_db)):
 def get_chain(db: Session = Depends(get_db)):
     blocks = db.query(BlockModel).order_by(BlockModel.index.asc()).all()
     
-    # CORREÇÃO: Mudámos de "hash" para "hash_bloco" e adicionámos o "timestamp"
     return [
         {
             "index": b.index, 
