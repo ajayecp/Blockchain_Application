@@ -8,7 +8,7 @@ Professor: Iury Valente de Bessa
 Requisitos iniciais:
 Instalar Vs Code
 Instalar Python
-
+Instalar extensão SQLite Viewer
 
 Comandos:
 

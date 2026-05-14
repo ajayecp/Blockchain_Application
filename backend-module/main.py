@@ -2,110 +2,129 @@ import hashlib
 import json
 import uuid
 from time import time
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional
+from sqlalchemy.orm import Session
 
-from FileStore import FileStorage
+# Importamos a nossa nova estrutura de base de dados
+from database import SessionLocal, BlockModel, engine
+
+# Função para obter a sessão da BD
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 class Blockchain:
-    def __init__(self):
-        self.storage = FileStorage("blockchain_data.json")
-        chain = self.storage.read()
-        if not chain:
-            self.create_block(previous_hash='1', proof=100, record_data={
-                "evento": "Gênesis - Sistema de Castanha Iniciado",
-                "status_validacao": "Sistema Online"
-            })
-
-    def create_block(self, proof: int, previous_hash: str, record_data: dict):
-        chain = self.storage.read()
-        block = {
-            'index': len(chain) + 1,
-            'timestamp': time(),
-            'dados': record_data,
-            'proof': proof,
-            'previous_hash': previous_hash
-        }
-        
-        hash_bloco = self.hash(block)
-        block['hash_bloco'] = hash_bloco
-        block['id'] = hash_bloco 
-        
-        self.storage.create(block)
-        return block
-
-    def get_previous_block(self):
-        chain = self.storage.read()
-        return chain[-1]
-
-    def hash(self, block):
-        block_copy = block.copy()
-        block_copy.pop('hash_bloco', None)
-        block_copy.pop('id', None)
-        encoded_block = json.dumps(block_copy, sort_keys=True).encode()
+    def hash(self, block_data):
+        encoded_block = json.dumps(block_data, sort_keys=True).encode()
         return hashlib.sha256(encoded_block).hexdigest()
 
     def proof_of_work(self, previous_proof):
         new_proof = 1
         while True:
             hash_op = hashlib.sha256(str(new_proof**2 - previous_proof**2).encode()).hexdigest()
-            if hash_op[:4] == '0000':
-                return new_proof
+            if hash_op[:4] == '0000': return new_proof
             new_proof += 1
 
-app = FastAPI(title="Blockchain Castanha da Amazônia")
+blockchain_logic = Blockchain()
+app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-blockchain = Blockchain()
-
-class EventoCastanha(BaseModel):
-    id_produto: str
-    origem_coleta: Optional[str] = ""
-    comunidade_fornecedora: Optional[str] = ""
-    peso_lote: float = 0.0
-    tamanho: str = "Média"
-    umidade: float = 0.0
-    status_produto: str = "Em processamento"
-    id_etapa: str
-    evento: str
-    usuario_responsavel: str
-    dispositivo_origem: str
-    localizacao: str
-    nivel_confiabilidade: float = 100.0
+@app.on_event("startup")
+def startup_event():
+    db = SessionLocal()
+    # Cria Bloco Gênesis se a tabela estiver vazia
+    if db.query(BlockModel).count() == 0:
+        genesis_dados = {"evento": "Gênesis - Sistema de Castanha Iniciado", "status": "Online"}
+        block_data = {
+            'index': 1,
+            'timestamp': time(),
+            'dados': genesis_dados,
+            'proof': 100,
+            'previous_hash': '1'
+        }
+        hash_val = blockchain_logic.hash(block_data)
+        db_block = BlockModel(
+            id=hash_val,
+            index=1,
+            timestamp=block_data['timestamp'],
+            proof=100,
+            previous_hash='1',
+            dados_json=json.dumps(genesis_dados)
+        )
+        db.add(db_block)
+        db.commit()
+    db.close()
 
 @app.post("/mine_event/")
-def mine_event(req: EventoCastanha):
-    prev_block = blockchain.get_previous_block()
-    proof = blockchain.proof_of_work(prev_block['proof'])
-    prev_hash = blockchain.hash(prev_block)
+def mine_event(req: dict, db: Session = Depends(get_db)):
+    prev_block = db.query(BlockModel).order_by(BlockModel.index.desc()).first()
+    proof = blockchain_logic.proof_of_work(prev_block.proof)
     
-    dados = req.dict()
-    dados["id_registro"] = str(uuid.uuid4())
-    dados["timestamp_evento"] = time()
+    # Prepara dados do bloco para hashing
+    block_content = {
+        'index': prev_block.index + 1,
+        'timestamp': time(),
+        'dados': req,
+        'proof': proof,
+        'previous_hash': prev_block.id
+    }
     
-    block = blockchain.create_block(proof, prev_hash, dados)
-    return {"codigo_blockchain": block['hash_bloco'], "bloco": block}
-
+    hash_bloco = blockchain_logic.hash(block_content)
+    
+    # Salva na BD
+    new_block = BlockModel(
+        id=hash_bloco,
+        index=block_content['index'],
+        timestamp=block_content['timestamp'],
+        proof=proof,
+        previous_hash=prev_block.id,
+        dados_json=json.dumps(req)
+    )
+    db.add(new_block)
+    db.commit()
+    
+    return {"codigo_blockchain": hash_bloco}
 @app.get("/buscar/{termo}")
-def buscar_geral(termo: str):
-    termo = termo.strip()
-    chain = blockchain.storage.read()
+def buscar(termo: str, db: Session = Depends(get_db)):
+    # Busca por Hash ou por ID do Produto dentro do JSON
+    blocks = db.query(BlockModel).all()
+    historico = []
+    id_produto_alvo = None
+
+    for b in blocks:
+        dados = json.loads(b.dados_json)
+        if b.id == termo or dados.get('id_produto') == termo:
+            id_produto_alvo = dados.get('id_produto')
+            break
     
-    for b in chain:
-        if (b.get('id') == termo or 
-            b.get('hash_bloco') == termo or 
-            b.get('dados', {}).get('id_produto') == termo):
-            
-            id_alvo = b.get('dados', {}).get('id_produto')
-            historico = [bl for bl in chain if bl.get('dados', {}).get('id_produto') == id_alvo]
-            tipo = "Hash" if (b.get('id') == termo or b.get('hash_bloco') == termo) else "Lote"
-            
-            return {"id_produto": id_alvo, "historico": historico, "tipo_busca": tipo}
-            
-    raise HTTPException(status_code=404, detail="Registro não encontrado na Blockchain.")
+    if id_produto_alvo:
+        for b in blocks:
+            dados = json.loads(b.dados_json)
+            if dados.get('id_produto') == id_produto_alvo:
+                # CORREÇÃO: Adicionamos o timestamp para a data funcionar
+                historico.append({"hash_bloco": b.id, "timestamp": b.timestamp, "dados": dados, "index": b.index})
+        
+        # Identifica o tipo de busca
+        tipo = "Hash" if termo == id_produto_alvo else "Lote"
+        return {"id_produto": id_produto_alvo, "historico": historico, "tipo_busca": tipo}
+    
+    raise HTTPException(status_code=404, detail="Não encontrado")
 
 @app.get("/chain/")
-def full_chain():
-    return blockchain.storage.read()
+def get_chain(db: Session = Depends(get_db)):
+    blocks = db.query(BlockModel).order_by(BlockModel.index.asc()).all()
+    
+    # CORREÇÃO: Mudámos de "hash" para "hash_bloco" e adicionámos o "timestamp"
+    return [
+        {
+            "index": b.index, 
+            "hash_bloco": b.id, 
+            "timestamp": b.timestamp, 
+            "dados": json.loads(b.dados_json)
+        } 
+        for b in blocks
+    ]
