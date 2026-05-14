@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico Blockchain - Castanha da Amazônia</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        
+        /* Navegação */
+        nav { margin-bottom: 30px; padding: 15px; background: #e8f5e9; border-radius: 8px; display: flex; gap: 20px; }
+        nav a { text-decoration: none; color: #2c5e3b; font-weight: bold; transition: color 0.3s; }
+        nav a:hover { color: #1b3d26; }
+        .active { border-bottom: 2px solid #2c5e3b; }
+
+        h1 { color: #2c5e3b; margin-top: 0; }
+        
+        /* Estatísticas */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: #fff; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .stat-card h3 { margin: 0; color: #718096; font-size: 14px; text-transform: uppercase; }
+        .stat-card p { margin: 10px 0 0; font-size: 24px; font-weight: bold; color: #2c5e3b; }
+
+        /* Filtro e Tabela */
+        .search-container { margin-bottom: 20px; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background-color: #2c5e3b; color: white; text-align: left; padding: 12px; font-size: 14px; }
+        td { padding: 12px; border-bottom: 1px solid #edf2f7; font-size: 14px; vertical-align: top; }
+        tr:hover { background-color: #f7fafc; }
+
+        /* Estilos de Células */
+        .hash-text { font-family: 'Courier New', Courier, monospace; color: #4a5568; font-size: 12px; word-break: break-all; max-width: 200px; display: block; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .etapa-badge { background: #ebf8ff; color: #2b6cb0; text-transform: uppercase; }
+        .status-badge { background: #f0fff4; color: #2f855a; }
+        
+        .loading { text-align: center; padding: 40px; color: #718096; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <nav>
+        <a href="index.html"> Registro de Lotes</a>
+        <a href="historico.html" class="active"> Histórico de Blockchain</a>
+    </nav>
+
+    <h1>Histórico Blockchain - Castanha da Amazônia</h1>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Blocos na Rede</h3>
+            <p id="count-blocos">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>Status da Rede</h3>
+            <p style="color: #38a169;">Ativo</p>
+        </div>
+    </div>
+
+    <div class="search-container">
+        <input type="text" id="filtroInput" placeholder="🔍 Filtrar por ID de Lote, Etapa, Evento ou Hash..." onkeyup="filtrarTabela()">
+    </div>
+
+    <div id="loading" class="loading">A carregar dados da blockchain...</div>
+
+    <table id="tabelaBlockchain" style="display: none;">
+        <thead>
+            <tr>
+                <th>Index</th>
+                <th>Data/Hora</th>
+                <th>Lote (ID)</th>
+                <th>Etapa</th>
+                <th>Evento / Descrição</th>
+                <th>Hash do Bloco</th>
+            </tr>
+        </thead>
+        <tbody id="corpoTabela">
+            </tbody>
+    </table>
+</div>
+
+<script>
+    const API_URL = "http://127.0.0.1:8000";
+
+    async function carregarDados() {
+        try {
+            const response = await fetch(`${API_URL}/chain/`);
+            const chain = await response.json();
+            
+            const corpoTabela = document.getElementById('corpoTabela');
+            const countBlocos = document.getElementById('count-blocos');
+            const loading = document.getElementById('loading');
+            const tabela = document.getElementById('tabelaBlockchain');
+
+            corpoTabela.innerHTML = "";
+
+            // Mostra do mais recente para o mais antigo
+            chain.reverse().forEach(bloco => {
+                const dados = bloco.dados;
+                const dataHora = new Date(bloco.timestamp * 1000).toLocaleString('pt-PT');
+
+                const row = `
+                    <tr>
+                        <td><strong>#${bloco.index}</strong></td>
+                        <td>${dataHora}</td>
+                        <td><span class="badge" style="background:#edf2f7; color:#2d3748">${dados.id_produto || 'SISTEMA'}</span></td>
+                        <td><span class="badge etapa-badge">${(dados.id_etapa || 'Gênesis').replace(/_/g, ' ')}</span></td>
+                        <td>
+                            ${dados.evento}<br>
+                            <small style="color: #a0aec0">${dados.localizacao || ''}</small>
+                        </td>
+                        <td><span class="hash-text" title="${bloco.hash_bloco}">${bloco.hash_bloco}</span></td>
+                    </tr>
+                `;
+                corpoTabela.innerHTML += row;
+            });
+
+            countBlocos.innerText = chain.length;
+            
+            loading.style.display = 'none';
+            tabela.style.display = 'table';
+
+        } catch (error) {
+            document.getElementById('loading').innerHTML = `<span style="color:red">Erro ao ligar ao servidor. Verifique se o backend está a correr.</span>`;
+            console.error("Erro:", error);
+        }
+    }
+
+    function filtrarTabela() {
+        const input = document.getElementById("filtroInput");
+        const filter = input.value.toUpperCase();
+        const table = document.getElementById("tabelaBlockchain");
+        const tr = table.getElementsByTagName("tr");
+
+        for (let i = 1; i < tr.length; i++) {
+            let textoLinha = tr[i].textContent || tr[i].innerText;
+            if (textoLinha.toUpperCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+    }
+
+    // Inicializar
+    carregarDados();
+</script>
+
+</body>
+</html>

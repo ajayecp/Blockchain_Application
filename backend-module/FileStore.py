@@ -10,7 +10,6 @@ class FileStorage:
     def _ensure_file_exists(self):
         """Garante que o arquivo exista e repara arquivos vazios (0 bytes)."""
         os.makedirs(os.path.dirname(self.filepath), exist_ok=True)
-        # O SEGREDO ESTÁ AQUI: Verifica se não existe OU se está vazio
         if not os.path.exists(self.filepath) or os.path.getsize(self.filepath) == 0:
             with open(self.filepath, 'w', encoding='utf-8') as file:
                 json.dump([], file)
