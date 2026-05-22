@@ -27,6 +27,39 @@ class Blockchain:
             if hash_op[:4] == '0000': return new_proof
             new_proof += 1
 
+    def is_chain_valid(self, chain):
+        previous_block = chain[0]
+        block_index = 1
+        
+        while block_index < len(chain):
+            block = chain[block_index]
+            
+            # Recria a estrutura exata do bloco anterior para recalcular o hash
+            prev_block_content = {
+                'index': previous_block.index,
+                'timestamp': previous_block.timestamp,
+                'dados': json.loads(previous_block.dados_json),
+                'proof': previous_block.proof,
+                'previous_hash': previous_block.previous_hash
+            }
+            
+            # 1. Verifica se a ligação criptográfica foi quebrada
+            # O 'previous_hash' do bloco atual TEM de ser igual ao hash recalculado do bloco anterior
+            if block.previous_hash != self.hash(prev_block_content):
+                return False
+    
+            previous_proof = previous_block.proof
+            proof = block.proof
+            hash_operation = hashlib.sha256(str(proof**2 - previous_proof**2).encode()).hexdigest()
+            
+            if hash_operation[:4] != '0000':
+                return False
+                
+            previous_block = block
+            block_index += 1
+            
+        return True
+
 blockchain_logic = Blockchain()
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -125,3 +158,23 @@ def get_chain(db: Session = Depends(get_db)):
         } 
         for b in blocks
     ]
+
+@app.get("/validar/")
+def validar_cadeia(db: Session = Depends(get_db)):
+    # Puxa todos os blocos do banco de dados em ordem cronológica
+    blocks = db.query(BlockModel).order_by(BlockModel.index.asc()).all()
+    
+    is_valid = blockchain_logic.is_chain_valid(blocks)
+    
+    if is_valid:
+        return {
+            "mensagem": "A Blockchain é válida! A integridade dos dados está garantida.", 
+            "valido": True,
+            "total_blocos": len(blocks)
+        }
+    else:
+        # Se alguém alterou manualmente o banco de dados (SQLite), o sistema acusa o erro
+        raise HTTPException(
+            status_code=400, 
+            detail="ALERTA: A Blockchain foi adulterada e é inválida!"
+        )
