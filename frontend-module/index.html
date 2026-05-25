@@ -76,9 +76,11 @@
 
                 <label>Status do Produto</label>
                 <select id="status_produto">
+                    <option value="Aprovado">Aprovado</option>
+                    <option value="Em processamento" selected>Armazenado</option>
                     <option value="Coletado">Coletado</option>
                     <option value="Em processamento" selected>Em processamento</option>
-                    <option value="Aprovado">Aprovado</option>
+                    <option value="Em processamento" selected>Em transporte</option>
                     <option value="Rejeitado">Rejeitado</option>
                 </select>
             </div>
@@ -88,24 +90,24 @@
 
                 <label>Etapa do Processo</label>
                 <select id="id_etapa">
+                    <option value="analise">Análise</option>
+                    <option value="armazenamento">Armazenamento</option>
                     <option value="coleta_in_natura">Coleta In Natura</option>
                     <option value="transporte_fluvial">Transporte Fluvial</option>
                     <option value="secagem">Secagem</option>
-                    <option value="analise_visao_computacional">Análise (Visão Computacional)</option>
-                    <option value="armazenamento">Armazenamento</option>
                 </select>
 
                 <label>Descrição do Evento*</label>
                 <input type="text" id="evento" required placeholder="Ex: Chegada ao porto principal">
 
                 <label>Dispositivo de Origem</label>
-                <input type="text" id="dispositivo_origem" placeholder="Ex: Scanner-Mobile-01">
+                <input type="text" id="dispositivo_origem" placeholder="Ex: Scanner">
 
                 <label>Localização (GPS/Fábrica)*</label>
                 <input type="text" id="localizacao" required placeholder="Ex: Manaus, AM">
 
                 <label>Usuário Responsável*</label>
-                <input type="text" id="usuario_responsavel" required placeholder="Ex: João Silva">
+                <input type="text" id="usuario_responsavel" required placeholder="Ex: Ajay Ramchandani">
 
                 <label>Nível de Confiança (%)</label>
                 <input type="number" id="nivel_confiabilidade" value="100" max="100" min="0">
