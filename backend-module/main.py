@@ -178,3 +178,25 @@ def validar_cadeia(db: Session = Depends(get_db)):
             status_code=400, 
             detail="ALERTA: A Blockchain foi adulterada e é inválida!"
         )
+@app.put("/ataque_simulado/{bloco_index}")
+def ataque_simulado(bloco_index: int, db: Session = Depends(get_db)):
+    # 1. Busca o bloco específico no banco de dados
+    bloco = db.query(BlockModel).filter(BlockModel.index == bloco_index).first()
+    
+    if not bloco:
+        raise HTTPException(status_code=404, detail="Bloco não encontrado na rede.")
+
+    # 2. Carrega o JSON original (os dados verdadeiros da castanha)
+    dados_alterados = json.loads(bloco.dados_json)
+    
+    # 3. Faz a alteração maliciosa
+    # Vamos alterar o ID do produto e o peso para simular um desvio
+    dados_alterados["id_produto"] = "LOTE-ADULTERADO-999"
+    dados_alterados["peso_lote"] = 9999.99
+    dados_alterados["usuario_responsavel"] = "Hacker Anónimo"
+    
+    # 4. Injeta o JSON corrompido de volta no banco SEM recalcular o Hash do bloco
+    bloco.dados_json = json.dumps(dados_alterados)
+    db.commit()
+
+    return {"alerta": f"FRAUDE: Os dados de input do Bloco #{bloco_index} foram alterados silenciosamente no banco de dados!"}
