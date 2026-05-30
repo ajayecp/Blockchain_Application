@@ -3,36 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro na Blockchain - Castanha da Amazônia</title>
-    
+    <title>Registro - Blockchain Castanha</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         
         /* Navegação */
         nav { margin-bottom: 30px; padding: 15px; background: #e8f5e9; border-radius: 8px; display: flex; gap: 20px; }
-        nav a { text-decoration: none; color: #2c5e3b; font-weight: bold; transition: color 0.3s; }
+        nav a { text-decoration: none; color: #2c5e3b; font-weight: bold; transition: color 0.3s; padding-bottom: 2px; }
         nav a:hover { color: #1b3d26; }
-        .active { border-bottom: 2px solid #2c5e3b; padding-bottom: 2px; }
+        .active { border-bottom: 2px solid #2c5e3b; }
+        .nav-test { color: #e53e3e; } .nav-test:hover { color: #c53030; }
 
         h1 { color: #2c5e3b; margin-top: 0; border-bottom: 2px solid #2c5e3b; padding-bottom: 10px; }
         
-        /* Layout do Formulário */
+        /* Formulário */
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .section-title { font-size: 18px; font-weight: bold; color: #2c5e3b; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-        
+        .section-title { font-size: 18px; font-weight: bold; color: #2c5e3b; margin-bottom: 10px; }
         label { display: block; margin-top: 10px; font-weight: bold; font-size: 14px; color: #555; }
-        input, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-        input:focus, select:focus { outline: none; border-color: #2c5e3b; box-shadow: 0 0 5px rgba(44, 94, 59, 0.3); }
-
-        /* Botão */
-        .btn-submit { 
-            background: #2d5a27; color: white; padding: 15px; border: none; width: 100%; 
-            font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 6px; 
-            margin-top: 25px; transition: background 0.3s; 
-        }
+        input, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; }
+        .btn-submit { background: #2d5a27; color: white; padding: 15px; border: none; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 6px; margin-top: 25px; }
         .btn-submit:hover { background: #1b3d26; }
         .btn-submit:disabled { background: #6c757d; cursor: not-allowed; }
     </style>
@@ -41,81 +32,64 @@
 
 <div class="container">
     <nav>
-        <a href="index.html" class="active"> Registro de Lotes</a>
-        <a href="history.html"> Histórico de Blockchain </a>
+        <a href="index.html" class="active"> Novo Registro de Lote</a>
+        <a href="history.html"> Explorador & Auditoria</a>
+        <a href="test.html" class="nav-hacker"> Simulador de Ataque</a>
     </nav>
 
-    <h1>Cadeia Produtiva: Castanha da Amazônia</h1>
+    <h1>Registro na Cadeia Produtiva</h1>
 
     <form id="formRegistro">
         <div class="grid">
             <div>
-                <div class="section-title">Dados do Lote (Produto)</div>
-                
+                <div class="section-title"> Dados do Produto</div>
                 <label>ID Produto (Lote)*</label>
                 <input type="text" id="id_produto" required placeholder="Ex: LOTE-2026-001">
-
                 <label>Origem (Floresta/Coordenadas)</label>
                 <input type="text" id="origem_coleta" placeholder="Ex: Seringal Cachoeira">
-
                 <label>Comunidade Fornecedora</label>
                 <input type="text" id="comunidade_fornecedora" placeholder="Ex: Cooperativa Chico Mendes">
-
                 <label>Peso do Lote (kg)</label>
                 <input type="number" id="peso_lote" step="0.01">
-
                 <label>Tamanho</label>
                 <select id="tamanho">
                     <option value="Pequena">Pequena</option>
                     <option value="Média" selected>Média</option>
                     <option value="Grande">Grande</option>
                 </select>
-
                 <label>Umidade (%)</label>
                 <input type="number" id="umidade" step="0.1">
-
                 <label>Status do Produto</label>
                 <select id="status_produto">
-                    <option value="Aprovado">Aprovado</option>
-                    <option value="Em processamento" selected>Armazenado</option>
                     <option value="Coletado">Coletado</option>
                     <option value="Em processamento" selected>Em processamento</option>
-                    <option value="Em processamento" selected>Em transporte</option>
-                    <option value="Rejeitado">Rejeitado</option>
+                    <option value="Aprovado">Aprovado</option>
                 </select>
             </div>
-
             <div>
-                <div class="section-title">Operação (Registro)</div>
-
+                <div class="section-title"> Operação (Registro)</div>
                 <label>Etapa do Processo</label>
                 <select id="id_etapa">
                     <option value="analise">Análise</option>
-                    <option value="armazenamento">Armazenamento</option>
+                    <option value="armazenado">Armazenado</option>
                     <option value="coleta_in_natura">Coleta In Natura</option>
-                    <option value="transporte_fluvial">Transporte Fluvial</option>
+                    <option value="em_transporte">Em Transporte</option>
                     <option value="secagem">Secagem</option>
                 </select>
-
                 <label>Descrição do Evento*</label>
                 <input type="text" id="evento" required placeholder="Ex: Chegada ao porto principal">
-
                 <label>Dispositivo de Origem</label>
-                <input type="text" id="dispositivo_origem" placeholder="Ex: Scanner">
-
+                <input type="text" id="dispositivo_origem" placeholder="Ex: Scanner-Mobile-01">
                 <label>Localização (GPS/Fábrica)*</label>
                 <input type="text" id="localizacao" required placeholder="Ex: Manaus, AM">
-
                 <label>Usuário Responsável*</label>
-                <input type="text" id="usuario_responsavel" required placeholder="Ex: Ajay Ramchandani">
-
+                <input type="text" id="usuario_responsavel" required placeholder="Ex: João Silva">
                 <label>Nível de Confiança (%)</label>
                 <input type="number" id="nivel_confiabilidade" value="100" max="100" min="0">
             </div>
         </div>
-
         <button id="btnRegistar" type="button" class="btn-submit" onclick="registrarDados()">
-            REGISTRAR NA BLOCKCHAIN
+            MINERAR E REGISTRAR NA BLOCKCHAIN
         </button>
     </form>
 </div>
@@ -125,89 +99,45 @@
 
     async function registrarDados() {
         const btn = document.getElementById('btnRegistar');
-        
-        // 1. Validação básica (garante que os campos obrigatórios não estão vazios)
         const id_produto = document.getElementById('id_produto').value.trim();
         const evento = document.getElementById('evento').value.trim();
         const localizacao = document.getElementById('localizacao').value.trim();
         const usuario = document.getElementById('usuario_responsavel').value.trim();
 
         if(!id_produto || !evento || !localizacao || !usuario) {
-            Swal.fire({ 
-                icon: 'warning', 
-                title: 'Campos Obrigatórios', 
-                text: 'Por favor, preencha os campos marcados com um asterisco (*).',
-                confirmButtonColor: '#2d5a27'
-            });
+            Swal.fire({ icon: 'warning', title: 'Campos Obrigatórios', text: 'Preencha os campos marcados com (*).' });
             return;
         }
 
-        // 2. Estado de Loading: Muda visualmente o botão para bloquear duplos cliques
         const textoOriginal = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '⏳ A minerar bloco... Por favor, aguarde.';
+        btn.innerHTML = '⏳ A minerar bloco...';
 
-        // 3. Montar o Objeto JSON com os dados recolhidos
         const dados = {
-            id_produto: id_produto,
-            origem_coleta: document.getElementById('origem_coleta').value,
+            id_produto, origem_coleta: document.getElementById('origem_coleta').value,
             comunidade_fornecedora: document.getElementById('comunidade_fornecedora').value,
             peso_lote: parseFloat(document.getElementById('peso_lote').value) || 0,
             tamanho: document.getElementById('tamanho').value,
             umidade: parseFloat(document.getElementById('umidade').value) || 0,
             status_produto: document.getElementById('status_produto').value,
             id_etapa: document.getElementById('id_etapa').value,
-            evento: evento,
-            usuario_responsavel: usuario,
+            evento, usuario_responsavel: usuario,
             dispositivo_origem: document.getElementById('dispositivo_origem').value,
-            localizacao: localizacao,
-            nivel_confiabilidade: parseFloat(document.getElementById('nivel_confiabilidade').value) || 100
+            localizacao, nivel_confiabilidade: parseFloat(document.getElementById('nivel_confiabilidade').value) || 100
         };
 
-        // 4. Enviar para a Blockchain via FastAPI
         try {
             const response = await fetch(`${API_URL}/mine_event/`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
+                method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(dados)
             });
-
-            if (!response.ok) {
-                throw new Error("Falha na comunicação com o servidor.");
-            }
-
+            if (!response.ok) throw new Error("Erro");
             const data = await response.json();
-            
-            // 5. Sucesso - Mostra a Notificação Toast Verde Elegante
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: 'Bloco Minerado e Registado!',
-                text: `Hash gerado: ${data.codigo_blockchain.substring(0, 15)}...`,
-                showConfirmButton: false,
-                timer: 4000,
-                timerProgressBar: true
-            });
-
-            // Limpa o formulário para a próxima castanha
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Bloco Minerado!', text: `Hash: ${data.codigo_blockchain.substring(0, 15)}...`, showConfirmButton: false, timer: 4000 });
             document.getElementById("formRegistro").reset();
-
         } catch (error) {
-            // 6. Erro - Mostra a Notificação Toast Vermelha
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'error',
-                title: 'Falha na Rede',
-                text: 'Não foi possível ligar à Blockchain. O backend (Uvicorn) está ativo?',
-                showConfirmButton: false,
-                timer: 5000,
-                timerProgressBar: true
-            });
-            console.error("Erro:", error);
+            Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Erro de Rede', showConfirmButton: false, timer: 4000 });
         } finally {
-            // 7. Retorna o botão ao estado normal
             btn.disabled = false;
             btn.innerHTML = textoOriginal;
         }
