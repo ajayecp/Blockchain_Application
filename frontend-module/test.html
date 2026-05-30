@@ -3,49 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hacker Simulator - Blockchain</title>
+    <title>Simulador de Ataque - Blockchain Castanha</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <style>
-        body { font-family: 'Courier New', Courier, monospace; background-color: #1a202c; margin: 0; padding: 20px; color: #a0aec0; }
-        .container { max-width: 700px; margin: 50px auto; background: #2d3748; padding: 40px; border-radius: 10px; border: 1px solid #4a5568; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         
-        /* Navegação adaptada para Dark Mode */
-        nav { margin-bottom: 30px; padding: 15px; background: #1a202c; border-radius: 8px; display: flex; gap: 20px; border: 1px solid #4a5568; }
-        nav a { text-decoration: none; color: #a0aec0; font-weight: bold; transition: color 0.3s; padding-bottom: 2px; font-family: 'Segoe UI', sans-serif;}
-        nav a:hover { color: #e2e8f0; }
-        .nav-hacker { color: #fc8181; border-bottom: 2px solid #fc8181; }
+        /* Navegação Consistente */
+        nav { margin-bottom: 30px; padding: 15px; background: #e8f5e9; border-radius: 8px; display: flex; gap: 20px; }
+        nav a { text-decoration: none; color: #2c5e3b; font-weight: bold; transition: color 0.3s; padding-bottom: 2px; }
+        nav a:hover { color: #1b3d26; }
+        .active { border-bottom: 2px solid #2c5e3b; }
+        .nav-test { color: #e53e3e; } 
+        .nav-test:hover { color: #c53030; }
+        .nav-test.active { border-bottom: 2px solid #e53e3e; } /* Sublinhado vermelho para a aba ativa de ataque */
 
-        h1 { color: #fc8181; margin-top: 0; border-bottom: 1px solid #4a5568; padding-bottom: 10px; }
+        /* Cabeçalhos e Textos */
+        h1 { color: #2c5e3b; margin-top: 0; border-bottom: 2px solid #2c5e3b; padding-bottom: 10px; margin-bottom: 20px; }
+        p { line-height: 1.6; color: #4a5568; margin-bottom: 25px; font-size: 15px; }
         
-        label { display: block; margin-top: 20px; font-weight: bold; color: #e2e8f0; }
-        input { width: 100%; padding: 15px; margin-top: 10px; border: 1px solid #4a5568; border-radius: 6px; background: #1a202c; color: #48bb78; font-size: 16px; font-family: 'Courier New', Courier, monospace; box-sizing: border-box; }
-        input:focus { outline: none; border-color: #fc8181; }
+        /* Formulário de Ataque */
+        .form-container { max-width: 600px; background: #f8fafc; padding: 25px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 25px; }
+        label { display: block; font-weight: bold; font-size: 14px; color: #555; margin-bottom: 8px; }
+        input[type="number"] { width: 100%; padding: 12px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-size: 16px; margin-bottom: 20px; }
+        input[type="number"]:focus { outline: none; border-color: #e53e3e; box-shadow: 0 0 5px rgba(229, 62, 62, 0.3); }
         
-        .btn-hack { background: #e53e3e; color: white; padding: 15px; border: none; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 6px; margin-top: 30px; transition: background 0.3s; font-family: 'Courier New', Courier, monospace; text-transform: uppercase; }
+        /* Botão Destrutivo */
+        .btn-hack { background: #e53e3e; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; transition: background 0.3s; }
         .btn-hack:hover { background: #c53030; }
         
-        .terminal-box { background: #000; padding: 15px; border-radius: 5px; margin-top: 20px; color: #48bb78; font-size: 13px; min-height: 60px; }
+        /* Caixa de Log (Antigo Terminal) */
+        .terminal-box { background: #edf2f7; border: 1px solid #cbd5e0; padding: 15px; border-radius: 6px; color: #2d3748; font-family: monospace; font-size: 14px; min-height: 60px; line-height: 1.5; white-space: pre-wrap; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <nav>
-        <a href="index.html">📦 Novo Registro de Lote</a>
-        <a href="history.html">🔍 Explorador & Auditoria</a>
-        <a href="hacker.html" class="nav-hacker">☠️ Simulador de Ataque</a>
+        <a href="index.html"> Novo Registro de Lote</a>
+        <a href="history.html"> Explorador & Auditoria</a>
+        <a href="test.html" class="nav-test active"> Simulador de Ataque</a>
     </nav>
 
-    <h1>Ferramenta de Injeção SQL (Ataque)</h1>
-    <p>Esta ferramenta simula um funcionário mal intencionado a aceder diretamente à base de dados SQLite para adulterar o peso e o identificador de um lote de castanhas específico, ignorando as regras de segurança.</p>
+    <h1>Injeção SQL </h1>
 
-    <label>ID do Bloco (Index) a corromper:</label>
-    <input type="number" id="bloco_index" placeholder="Ex: 2" min="2">
+    <div class="form-container">
+        <label>ID do Bloco :</label>
+        <input type="number" id="bloco_index" placeholder="Ex: 2" min="2">
 
-    <button class="btn-hack" onclick="executarAtaque()">Injetar Código Malicioso</button>
+        <button class="btn-hack" onclick="executarAtaque()">Adulterar Dados</button>
+    </div>
 
     <div class="terminal-box" id="terminal">
-        > Sistema pronto. Aguardando alvo...
+> Aguardando...
     </div>
 </div>
 
@@ -57,7 +69,7 @@
         const terminal = document.getElementById('terminal');
 
         if (!blocoIndex || blocoIndex < 2) {
-            terminal.innerHTML = "> Erro: Selecione um bloco válido (Mínimo: 2). O bloco Gênesis (1) não deve ser corrompido.";
+            terminal.innerHTML = "> Erro: Selecione um bloco válido (Mínimo: 2).\n> O bloco Gênesis (1) é fundacional e não deve ser corrompido.";
             return;
         }
 
@@ -71,13 +83,13 @@
             const data = await response.json();
 
             if (response.ok) {
-                terminal.innerHTML = `> SUCESSO!\n> ${data.alerta}\n> Vá à aba de Histórico e execute a auditoria para ver a falha de segurança.`;
-                Swal.fire({ icon: 'warning', title: 'Adulteração Concluída', text: 'Base de dados corrompida. Teste a auditoria agora!', confirmButtonColor: '#000' });
+                terminal.innerHTML = `> SUCESSO DA OPERAÇÃO!\n> ${data.alerta}\n> Navegue até à aba "Explorador & Auditoria" e execute a validação para visualizar a quebra da cadeia.`;
+                Swal.fire({ icon: 'warning', title: 'Adulteração Concluída', text: 'Base de dados corrompida com sucesso. Teste a auditoria agora!', confirmButtonColor: '#e53e3e' });
             } else {
                 terminal.innerHTML = `> Falha no ataque: ${data.detail}`;
             }
         } catch (error) {
-            terminal.innerHTML = "> Erro Crítico: Não foi possível contactar o servidor backend. O Uvicorn está rodando?";
+            terminal.innerHTML = "> Erro Crítico: Não foi possível contactar o servidor backend. O Uvicorn está a correr?";
         }
     }
 </script>
