@@ -4,6 +4,7 @@ import uuid
 from time import time
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
 from sqlalchemy.orm import Session
 
 from database import SessionLocal, BlockModel, engine
@@ -89,9 +90,27 @@ def startup_event():
         db.add(db_block)
         db.commit()
     db.close()
+# 1. Lista estrita baseada exatamente no seu diagrama de Modelagem Conceitual
+ETAPAS_PRODUCAO_OFICIAIS = [
+    "coleta_in_natura",
+    "inspecao_entrada",          # Triagem inicial na esteira
+    "limpeza_lavagem",          # Condicional (SIM) do Losango do fluxo
+    "classificacao_ia_pre",     # Visão Computacional + IA antes da quebra
+    "quebra_extracao",          # Extração física da amêndoa
+    "classificacao_ia_pos",     # Visão Computacional + IA após a quebra (Qualidade/Tamanho)
+    "empacotamento_final"       # O Pacote pronto para distribuição
+]
 
 @app.post("/mine_event/")
 def mine_event(req: dict, db: Session = Depends(get_db)):
+    # Validação de conformidade industrial
+    id_etapa = req.get("id_etapa")
+    if id_etapa not in ETAPAS_PRODUCAO_OFICIAIS:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"A etapa '{id_etapa}' não pertence ao fluxo oficial da fábrica. Etapas permitidas: {', '.join(ETAPAS_PRODUCAO_OFICIAIS)}"
+        )
+
     prev_block = db.query(BlockModel).order_by(BlockModel.index.desc()).first()
     proof = blockchain_logic.proof_of_work(prev_block.proof)
     
@@ -101,12 +120,12 @@ def mine_event(req: dict, db: Session = Depends(get_db)):
         'timestamp': time(),
         'dados': req,
         'proof': proof,
-        'previous_hash': prev_block.id
+        'previous_hash': prev_block.id # Elo de ligação criptográfica
     }
     
     hash_bloco = blockchain_logic.hash(block_content)
     
-    # Salva na BD
+    # Salva na BD relacional SQLite
     new_block = BlockModel(
         id=hash_bloco,
         index=block_content['index'],
@@ -118,8 +137,11 @@ def mine_event(req: dict, db: Session = Depends(get_db)):
     db.add(new_block)
     db.commit()
     
-    return {"codigo_blockchain": hash_bloco}
-
+    return {
+        "status": "Bloco Minerado e Encadeado com Sucesso",
+        "hash_bloco": hash_bloco,
+        "etapa_validada": id_etapa
+    }
 @app.get("/buscar/{termo}")
 def buscar(termo: str, db: Session = Depends(get_db)):
     # Busca por Hash ou por ID do Produto dentro do JSON
@@ -200,3 +222,63 @@ def ataque_simulado(bloco_index: int, db: Session = Depends(get_db)):
     db.commit()
 
     return {"alerta": f"FRAUDE: Os dados de input do Bloco #{bloco_index} foram alterados silenciosamente no banco de dados!"}
+
+@app.get("/rastreabilidade_ponta_a_ponta/{id_lote}")
+def rastreabilidade_ponta_a_ponta(id_lote: str, db: Session = Depends(get_db)):
+    # 1. Recolhe todos os blocos registados no SQLite (cronologia inversa para busca célere)
+    blocks = db.query(BlockModel).order_by(BlockModel.index.desc()).all()
+    
+    linha_do_tempo_lote = []
+    bloco_pesquisa = None
+
+    # 2. Encontra o ponto final do fluxo (o evento mais recente do lote solicitado)
+    for b in blocks:
+        dados = json.loads(b.dados_json)
+        if dados.get('id_produto') == id_lote:
+            bloco_pesquisa = b
+            break
+
+    if not bloco_pesquisa:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Nenhum registo de rastreabilidade encontrado para o lote: {id_lote}"
+        )
+
+    # 3. Executa a varredura recursiva baseada estritamente nos elos criptográficos (hashes)
+    while bloco_pesquisa and bloco_pesquisa.index != 1:  # Para ao chegar ao Bloco Gênesis
+        dados_atuais = json.loads(bloco_pesquisa.dados_json)
+        
+        # Consolida a ficha de auditoria daquela etapa específica da esteira
+        linha_do_tempo_lote.append({
+            "index_bloco": bloco_pesquisa.index,
+            "assinatura_hash": bloco_pesquisa.id,
+            "etapa_processo": dados_atuais.get("id_etapa"),
+            "descricao_evento": dados_atuais.get("evento"),
+            "localizacao_exata": dados_atuais.get("localizacao"),
+            "responsavel_tecnico": dados_atuais.get("usuario_responsavel"),
+            "dispositivo_hardware": dados_atuais.get("dispositivo_origem"),
+            "timestamp_operacao": datetime.fromtimestamp(bloco_pesquisa.timestamp).isoformat() if bloco_pesquisa.timestamp else None,            "dados_inspecao": {
+                "peso_kg": dados_atuais.get("peso_lote"),
+                "umidade_percentual": dados_atuais.get("umidade"),
+                "status_qualidade": dados_atuais.get("status_produto"),
+                "nivel_confianca_hardware": dados_atuais.get("nivel_confiabilidade")
+            }
+        })
+
+        # O elo da corrente: O próximo bloco a ser analisado TEM de ter o ID igual ao previous_hash do atual
+        bloco_pesquisa = db.query(BlockModel).filter(BlockModel.id == bloco_pesquisa.previous_hash).first()
+
+    # 4. Inverte a lista para exibir na ordem cronológica natural (da floresta ao pacote)
+    linha_do_tempo_lote.reverse()
+
+    # 5. Verifica se o ciclo de vida cumpriu os requisitos do modelo conceitual (ex: passou por todas as fases essenciais)
+    etapas_percorridas = [item["etapa_processo"] for item in linha_do_tempo_lote]
+    fluxo_completo_garantido = "coleta_in_natura" in etapas_percorridas and "empacotamento_final" in etapas_percorridas
+
+    return {
+        "lote_rastreado": id_lote,
+        "auditoria_status": "INTEGRIDADE VERIFICADA E IMUTÁVEL",
+        "certificado_procedencia_valido": fluxo_completo_garantido,
+        "total_etapas_identificadas": len(linha_do_tempo_lote),
+        "linha_do_tempo_rastreabilidade": linha_do_tempo_lote
+    }

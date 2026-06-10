@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rastreabilidade - Blockchain Castanha</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        
+        /* Navegação Consistente */
+        nav { margin-bottom: 30px; padding: 15px; background: #e8f5e9; border-radius: 8px; display: flex; gap: 20px; }
+        nav a { text-decoration: none; color: #2c5e3b; font-weight: bold; transition: color 0.3s; padding-bottom: 2px; }
+        nav a:hover { color: #1b3d26; }
+        .active { border-bottom: 2px solid #2c5e3b; }
+        .nav-test { color: #e53e3e; }
+        .nav-test:hover { color: #c53030; }
+
+        h1 { color: #2c5e3b; margin-top: 0; margin-bottom: 10px; }
+        p.description { line-height: 1.6; color: #4a5568; margin-bottom: 25px; font-size: 15px; }
+        
+        /* Área de Busca */
+        .search-box { display: flex; gap: 10px; margin-bottom: 25px; }
+        .search-box input { flex: 1; padding: 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; }
+        .search-box input:focus { outline: none; border-color: #2c5e3b; box-shadow: 0 0 5px rgba(44, 94, 59, 0.3); }
+        .search-box button { background: #2c5e3b; color: white; border: none; padding: 0 25px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; transition: background 0.3s; }
+        .search-box button:hover { background: #1b3d26; }
+        
+        /* Resumo Informativo Técnico */
+        .summary { display: none; border: 1px solid #cbd5e0; padding: 15px; border-radius: 6px; margin-bottom: 25px; font-size: 14px; background-color: #f8fafc; color: #2d3748; }
+
+        /* Lista de Estágios (Timeline) */
+        .timeline-list { display: none; }
+        .step-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-bottom: 15px; background-color: #f8fafc; }
+        
+        .step-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 10px; font-size: 14px; border-bottom: 1px dashed #cbd5e0; padding-bottom: 5px; color: #2c5e3b; }
+        .step-details { font-size: 13px; color: #333333; line-height: 1.6; }
+        .hash-footer { font-family: monospace; font-size: 11px; color: #718096; margin-top: 10px; display: block; word-break: break-all; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <nav>
+        <a href="index.html"> Novo Registro de Lote</a>
+        <a href="history.html"> Explorador & Auditoria</a>
+        <a href="rastreabilidade.html"  class="active" >Rastreabilidade</a>
+        <a href="test.html" class="nav-hacker"> Simulador de Ataque</a>
+    </nav>
+
+    <h1>Rastreamento de Lote</h1>
+    <p class="description">Informe o identificador do produto para recuperar o histórico completo de transações e a árvore de ciclos registrada no banco de dados.</p>
+
+    <div class="search-box">
+        <input type="text" id="loteInput" placeholder="Identificador do Lote...">
+        <button onclick="buscarRastreabilidade()">Buscar Dados</button>
+    </div>
+
+    <div class="summary" id="loteSummary"></div>
+
+    <div class="timeline-list" id="listaEtapas"></div>
+</div>
+
+<script>
+    const API_URL = "http://127.0.0.1:8000";
+
+    async function buscarRastreabilidade() {
+        const idLote = document.getElementById('loteInput').value.trim();
+        const lista = document.getElementById('listaEtapas');
+        const resumo = document.getElementById('loteSummary');
+
+        if (!idLote) {
+            Swal.fire({ icon: 'warning', title: 'Aviso', text: 'Insira o identificador do lote.', confirmButtonColor: '#2c5e3b' });
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/rastreabilidade_ponta_a_ponta/${idLote}`);
+            if (!response.ok) throw new Error("Lote não localizado no sistema.");
+            const res = await response.json();
+            
+            // Renderização do Cabeçalho de Validação Técnico
+            const procedenciaTexto = res.certificado_procedencia_valido ? "CONCLUÍDA" : "INCOMPLETA";
+            resumo.innerHTML = `<strong>Lote Rastreado:</strong> ${res.lote_rastreado} | <strong>Validação de Procedência:</strong> ${procedenciaTexto} | <strong>Total de Estágios:</strong> ${res.total_etapas_identificadas}`;
+            resumo.style.display = 'block';
+
+            // Limpeza e Injeção de Blocos Históricos
+            lista.innerHTML = "";
+            lista.style.display = 'block';
+
+            res.linha_do_tempo_rastreabilidade.forEach(step => {
+                const etapaNome = step.etapa_processo.toUpperCase().replace(/_/g, ' ');
+
+                lista.innerHTML += `
+                    <div class="step-card">
+                        <div class="step-header">
+                            <span>ETAPA: ${etapaNome}</span>
+                            <span>Bloco #${step.index_bloco}</span>
+                        </div>
+                        <div class="step-details">
+                            <strong>Evento:</strong> ${step.descricao_evento}<br>
+                            <strong>Localização:</strong> ${step.localizacao_exata}<br>
+                            <strong>Responsável Técnico:</strong> ${step.responsavel_tecnico}<br>
+                            <strong>Dispositivo ID:</strong> ${step.dispositivo_hardware}<br>
+                            <strong>Métricas Coletadas:</strong> Peso: ${step.dados_inspecao.weight_kg || step.dados_inspecao.peso_kg} kg | Umidade: ${step.dados_inspecao.umidade_percentual}%
+                        </div>
+                        <span class="hash-footer">ASSINATURA CRIPTOGRÁFICA (HASH): ${step.assinatura_hash}</span>
+                    </div>
+                `;
+            });
+
+        } catch (error) {
+            resumo.style.display = 'none';
+            lista.style.display = 'none';
+            Swal.fire({ icon: 'error', title: 'Erro na Consulta', text: error.message, confirmButtonColor: '#2c5e3b' });
+        }
+    }
+</script>
+</body>
+</html>
