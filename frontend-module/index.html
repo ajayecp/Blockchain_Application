@@ -31,10 +31,11 @@
 <body>
 
 <div class="container">
-    <nav>
+   <nav>
         <a href="index.html" class="active"> Novo Registro de Lote</a>
         <a href="history.html"> Explorador & Auditoria</a>
         <a href="rastreabilidade.html">Rastreabilidade</a>
+        <a href="emulador.html"> Emulador de Fábrica</a>
         <a href="test.html" class="nav-hacker"> Simulador de Ataque</a>
     </nav>
 
@@ -180,6 +181,31 @@
         btn.innerHTML = textoOriginal;
     }
 }
+    async function rodarEmulador() {
+        const nLotes = document.getElementById('emu_lotes').value;
+        const probDescarte = document.getElementById('emu_descarte').value / 100.0;
+        const terminal = document.getElementById('emu_terminal');
+
+        terminal.innerHTML = `> Iniciando emulador...\\n> Gerando ${nLotes} lotes e recalculando criptografia SHA-256 no SQLite...`;
+
+        try {
+            const params = new URLSearchParams({ n_lotes: nLotes, prob_descarte: probDescarte });
+            const response = await fetch(`${API_URL}/emular/?${params.toString()}`, { method: "POST" });
+            const data = await response.json();
+
+            if (!response.ok) throw new Error(data.detail || "Erro de servidor.");
+
+            terminal.innerHTML = 
+                `> EMULAÇÃO CONCLUÍDA\\n` +
+                `> Lotes ID: ${data.lotes_ids.join(", ")}\\n` +
+                `> Eventos minerados com sucesso: ${data.eventos_minerados}\\n` +
+                `> Blocos armazenados no SQLite: ${data.total_blocos_na_cadeia}`;
+                
+            Swal.fire({ icon: 'success', title: 'Emulação Completa', text: `${data.eventos_minerados} blocos foram adicionados!`, confirmButtonColor: '#2c5e3b' });
+        } catch (error) {
+            terminal.innerHTML = `> Erro: ${error.message}`;
+        }
+    }
 </script>
 </body>
 </html>

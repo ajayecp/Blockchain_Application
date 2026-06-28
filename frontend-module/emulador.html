@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emulador de Dados - Blockchain Castanha</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+
+        nav { margin-bottom: 30px; padding: 15px; background: #e8f5e9; border-radius: 8px; display: flex; gap: 20px; flex-wrap: wrap; }
+        nav a { text-decoration: none; color: #2c5e3b; font-weight: bold; transition: color 0.3s; padding-bottom: 2px; }
+        nav a:hover { color: #1b3d26; }
+        nav a.active { border-bottom: 2px solid #2c5e3b; }
+
+        h1 { color: #2d5a27; margin-top: 0; border-bottom: 2px solid #2d5a27; padding-bottom: 10px; }
+        p.description { line-height: 1.6; color: #4a5568; margin-bottom: 25px; font-size: 15px; }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        label { display: block; margin-top: 10px; font-weight: bold; font-size: 14px; color: #555; }
+        input[type="number"] { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; }
+        .check-row { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+        .check-row input { width: 18px; height: 18px; }
+        .check-row label { margin: 0; }
+        small { color: #718096; display: block; margin-top: 4px; font-weight: normal; }
+
+        .btn-submit { background: #2d5a27; color: white; padding: 15px; border: none; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 6px; margin-top: 25px; }
+        .btn-submit:hover { background: #1b3d26; }
+        .btn-submit:disabled { background: #6c757d; cursor: not-allowed; }
+
+        .terminal-box { background: #edf2f7; border: 1px solid #cbd5e0; padding: 15px; border-radius: 6px; color: #2d3748; font-family: monospace; font-size: 14px; min-height: 60px; line-height: 1.6; white-space: pre-wrap; margin-top: 25px; }
+        .links-after { margin-top: 15px; font-size: 14px; }
+        .links-after a { color: #2c5e3b; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+     <nav>
+        <a href="index.html" > Novo Registro de Lote</a>
+        <a href="history.html"> Explorador & Auditoria</a>
+        <a href="rastreabilidade.html">Rastreabilidade</a>
+        <a href="emulador.html" class="active"> Emulador de Fábrica</a>
+        <a href="test.html" class="nav-hacker"> Simulador de Ataque</a>
+    </nav>
+
+    <h1>Emulador de Dados da Cadeia Produtiva</h1>
+    <p class="description">
+        Gera dados sintéticos (porém coerentes) das etapas do processo e minera cada
+        evento como um bloco, usando a mesma lógica do cadastro manual. Útil para popular
+        a blockchain rapidamente para demonstração e testes.
+    </p>
+
+    <form id="formEmulador">
+        <div class="grid">
+            <div>
+                <label>Quantidade de Lotes</label>
+                <input type="number" id="n_lotes" value="5" min="1" max="200">
+                <small>Cada lote percorre as etapas oficiais (até 7 blocos por lote).</small>
+
+                <label>Probabilidade de Descarte na Triagem</label>
+                <input type="number" id="prob_descarte" value="0" min="0" max="1" step="0.05">
+                <small>0 = todos completam o fluxo. Ex.: 0.25 reprova ~1 em cada 4 na triagem.</small>
+            </div>
+            <div>
+                <label>Semente (opcional)</label>
+                <input type="number" id="seed" placeholder="Ex: 42 (reprodutível)">
+                <small>Mesma semente gera exatamente os mesmos dados.</small>
+
+                <div class="check-row">
+                    <input type="checkbox" id="intercalar">
+                    <label>Intercalar etapas entre lotes</label>
+                </div>
+                <small>Mistura os lotes na cadeia (bom para testar o isolamento por lote na rastreabilidade).</small>
+            </div>
+        </div>
+
+        <button id="btnEmular" type="button" class="btn-submit" onclick="emular()">
+            GERAR E MINERAR NA BLOCKCHAIN
+        </button>
+    </form>
+
+    <div class="terminal-box" id="terminal">&gt; Aguardando…</div>
+    <div class="links-after" id="linksAfter"></div>
+</div>
+
+<script>
+    const API = "http://127.0.0.1:8000";
+
+    async function emular() {
+        const btn = document.getElementById('btnEmular');
+        const terminal = document.getElementById('terminal');
+        const linksAfter = document.getElementById('linksAfter');
+        linksAfter.innerHTML = "";
+
+        const nLotes = parseInt(document.getElementById('n_lotes').value) || 1;
+        const probDescarte = parseFloat(document.getElementById('prob_descarte').value) || 0;
+        const intercalar = document.getElementById('intercalar').checked;
+        const seedRaw = document.getElementById('seed').value.trim();
+
+        const params = new URLSearchParams({
+            n_lotes: nLotes,
+            intercalar: intercalar,
+            prob_descarte: probDescarte
+        });
+        if (seedRaw !== "") params.append("seed", parseInt(seedRaw));
+
+        const textoOriginal = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '⏳ A minerar blocos…';
+        terminal.innerHTML = `> Gerando ${nLotes} lote(s) e minerando os eventos…\n> (a prova de trabalho de cada bloco leva um instante)`;
+
+        try {
+            const response = await fetch(`${API}/emular/?${params.toString()}`, { method: "POST" });
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.detail || "Erro no servidor backend.");
+            }
+
+            terminal.innerHTML =
+                `> EMULAÇÃO CONCLUÍDA\n` +
+                `> Lotes gerados: ${data.lotes_gerados}` + (data.intercalado ? "  (intercalado)" : "") + `\n` +
+                `> Eventos minerados: ${data.eventos_minerados}\n` +
+                `> Lotes: ${data.lotes_ids.join(", ")}\n` +
+                `> Primeiro hash: ${(data.primeiro_hash || "").substring(0, 24)}…\n` +
+                `> Último hash:   ${(data.ultimo_hash || "").substring(0, 24)}…\n` +
+                `> Total de blocos na cadeia: ${data.total_blocos_na_cadeia}`;
+
+            linksAfter.innerHTML =
+                `Rastreie um lote na página de <a href="index.html">Registro / Rastreabilidade</a> ` +
+                `(ex.: <strong>${data.lotes_ids[0]}</strong>).`;
+        } catch (error) {
+            terminal.innerHTML = `> Falha: ${error.message || 'Verifique a conexão com o backend (uvicorn).'}`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = textoOriginal;
+        }
+    }
+</script>
+</body>
+</html>

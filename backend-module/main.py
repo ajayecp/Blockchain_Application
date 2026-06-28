@@ -8,6 +8,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from database import SessionLocal, BlockModel, engine
+import emulador
 
 def get_db():
     db = SessionLocal()
@@ -281,4 +282,46 @@ def rastreabilidade_ponta_a_ponta(id_lote: str, db: Session = Depends(get_db)):
         "certificado_procedencia_valido": fluxo_completo_garantido,
         "total_etapas_identificadas": len(linha_do_tempo_lote),
         "linha_do_tempo_rastreabilidade": linha_do_tempo_lote
+    }
+
+@app.post("/emular/")
+def emular_lotes(
+    n_lotes: int = 1, 
+    intercalar: bool = False, 
+    prob_descarte: float = 0.0, 
+    seed: int = None,
+    db: Session = Depends(get_db)
+):
+    # Usa a função do seu colega para criar a fila de eventos sintéticos
+    fila = emulador.montar_fila(
+        n_lotes=n_lotes, 
+        intercalar=intercalar,
+        prob_descarte=prob_descarte, 
+        seed=seed
+    )
+
+    minerados = 0
+    primeiro_hash = None
+    ultimo_hash = None
+
+    for evento in fila:
+        # PULO DO GATO: Passa o evento do emulador para a SUA função oficial que grava no SQLite
+        resultado = mine_event(req=evento, db=db)
+        
+        hash_atual = resultado["hash_bloco"]
+        if not primeiro_hash:
+            primeiro_hash = hash_atual
+        ultimo_hash = hash_atual
+        minerados += 1
+
+    lotes_ids = sorted({ev["id_produto"] for ev in fila})
+    
+    return {
+        "status": "Emulacao concluida",
+        "lotes_gerados": n_lotes,
+        "lotes_ids": lotes_ids,
+        "eventos_minerados": minerados,
+        "primeiro_hash": primeiro_hash,
+        "ultimo_hash": ultimo_hash,
+        "total_blocos_na_cadeia": db.query(BlockModel).count()
     }
