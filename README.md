@@ -45,6 +45,7 @@ abra o terminal e use o seguinte comando
         python -m venv env ou
         py -3.14 -m venv env
         .\env\Scripts\activate
+        cd backend-module
         pip install -r .\requirements.txt
 ==========================================================================
    PARTE 1 - LIGAR O SERVIDOR (BACKEND) A PARTIR DO main.py
