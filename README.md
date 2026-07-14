@@ -42,7 +42,8 @@ abra o terminal e use o seguinte comando
        c:\Blockchain_Application
 
 4)  Execute os seguintes comandos em um terminal para usar variáveis de ambiente e instalar dependencias
-        python -m venv env 
+        python -m venv env ou
+        py -3.14 -m venv env
         .\env\Scripts\activate
         pip install -r .\requirements.txt
 ==========================================================================
