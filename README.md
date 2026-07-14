@@ -87,25 +87,14 @@ PASSO 1.4 - Confirmar que ligou
 
 PASSO 2.1 - Abrir um SEGUNDO terminal
    No VS Code, no canto do painel do terminal, clique no sinal de "+"
-   (Novo Terminal). Ou use o menu:  Terminal > Novo Terminal. Ou digite Ctrl+Shift+5
+   (Novo Terminal). Ou use o menu:  Terminal > Novo Terminal. Ou digite Ctrl+Shift+'
    Vai abrir uma nova aba de terminal (o primeiro continua rodando).
 
 PASSO 2.2 - Abrir a tela principal (Cadastro e Rastreabilidade)
    Neste segundo terminal, digite e aperte ENTER:
 
-       Invoke-Item c:\Blockchain_Application\frontend-module\index.html
-
+    python -m http.server 8080
    A pagina vai abrir no seu navegador padrao (Chrome, Edge, etc.).
-
-PASSO 2.3 - Abrir a tela do Emulador
-   Ainda no segundo terminal, digite e aperte ENTER:
-
-       Invoke-Item c:\Blockchain_Application\frontend-module\emulador.html
-
-   O "Invoke-Item" e o comando do PowerShell para abrir o arquivo no
-   programa padrao. Se preferir, o comando "start" tambem funciona:
-
-       start c:\Blockchain_Application\frontend-module\index.html
 
 
 ==========================================================================
@@ -189,6 +178,5 @@ SOLUCAO: Ligue o servidor em outra porta, por exemplo 8001:
 Resumo rapido (decoreba):
    Terminal 1:  cd ...\backend-module
                 .\venv\Scripts\uvicorn.exe main:app --reload      (deixe aberto)
-   Terminal 2:  Invoke-Item ...\frontend-module\index.html
-                Invoke-Item ...\frontend-module\emulador.html
+   Terminal 2:  python -m http.server 8080
 ==========================================================================
